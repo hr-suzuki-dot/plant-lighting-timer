@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>植物工場 照明タイマー Ver.1</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;color:#18212b;background:#f4f7f9}
+*{box-sizing:border-box} body{margin:0}
+header{background:#fff;padding:22px 28px;border-bottom:1px solid #dde4e8;display:flex;justify-content:space-between;align-items:center}
+h1{font-size:24px;margin:0}.sub{color:#65727e;font-size:14px}
+main{max-width:1050px;margin:auto;padding:26px}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin:18px 0 24px}
+.day{border:1px solid #cfd8de;background:white;border-radius:12px;padding:13px;font-size:17px}
+.day.active{background:#1478e8;color:white;border-color:#1478e8;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{background:white;border:1px solid #dce3e7;border-radius:18px;padding:20px;box-shadow:0 3px 12px #0000000c}
+.card h2{margin:0 0 18px;font-size:21px}
+.row{display:flex;justify-content:space-between;align-items:center;margin:14px 0}
+label{font-weight:650} input[type=time]{font-size:20px;padding:10px;border:1px solid #c9d3da;border-radius:10px;background:#fff}
+.switch{display:flex;align-items:center;gap:8px}
+input[type=checkbox]{width:25px;height:25px}
+.timeline{background:white;margin-top:18px;border-radius:18px;border:1px solid #dce3e7;padding:20px}
+.summary{display:grid;grid-template-columns:80px 1fr 1fr;gap:8px;padding:10px 0;border-bottom:1px solid #edf0f2}
+.actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+button.action{font-size:16px;padding:12px 18px;border-radius:10px;border:1px solid #cbd5dc;background:white}
+button.primary{background:#1478e8;color:white;border-color:#1478e8}
+.notice{margin-top:12px;color:#356244;min-height:24px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.days{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head>
+<body>
+<header><div><h1>植物工場　照明タイマー</h1><div class="sub">Ver.1 — 曜日別・3系統照明</div></div><div>🌱</div></header>
+<main>
+<div><strong>曜日を選択</strong></div>
+<div class="days" id="days"></div>
+<div class="grid" id="cards"></div>
+<div class="timeline">
+  <strong id="sumTitle">月曜日の設定</strong>
+  <div id="summary"></div>
+</div>
+<div class="actions">
+<button class="action" id="reset">初期設定に戻す</button>
+<button class="action primary" id="save">設定を保存</button>
+</div>
+<div class="notice" id="notice"></div>
+</main>
+<script>
+const dayNames=["月","火","水","木","金","土","日"];
+const fullNames=["月曜日","火曜日","水曜日","木曜日","金曜日","土曜日","日曜日"];
+const defaults={A:{on:"06:00",off:"18:00",enabled:true},B:{on:"08:00",off:"16:00",enabled:true},C:{on:"10:00",off:"20:00",enabled:true}};
+let data=JSON.parse(localStorage.getItem("plantTimerV1")||"null");
+if(!data){data={};dayNames.forEach(d=>data[d]=JSON.parse(JSON.stringify(defaults)))}
+let selected=0;
+function renderDays(){
+ const el=document.getElementById("days"); el.innerHTML="";
+ dayNames.forEach((d,i)=>{let b=document.createElement("button");b.className="day"+(i===selected?" active":"");b.textContent=d;b.onclick=()=>{selected=i;render()};el.appendChild(b)})
+}
+function renderCards(){
+ const el=document.getElementById("cards");el.innerHTML="";
+ ["A","B","C"].forEach(light=>{
+  const v=data[dayNames[selected]][light];
+  const card=document.createElement("div");card.className="card";
+  card.innerHTML=`<h2>照明 ${light}</h2>
+   <div class="row"><label>使用する</label><span class="switch"><input type="checkbox" ${v.enabled?"checked":""} data-k="enabled"></span></div>
+   <div class="row"><label>ON 時刻</label><input type="time" value="${v.on}" data-k="on"></div>
+   <div class="row"><label>OFF 時刻</label><input type="time" value="${v.off}" data-k="off"></div>`;
+  card.querySelectorAll("input").forEach(inp=>inp.onchange=e=>{
+    const k=e.target.dataset.k; data[dayNames[selected]][light][k]=k==="enabled"?e.target.checked:e.target.value; renderSummary();
+  });
+  el.appendChild(card);
+ })
+}
+function renderSummary(){
+ document.getElementById("sumTitle").textContent=fullNames[selected]+"の設定";
+ const el=document.getElementById("summary");el.innerHTML="";
+ ["A","B","C"].forEach(light=>{
+  const v=data[dayNames[selected]][light];
+  el.innerHTML+=`<div class="summary"><strong>${light}</strong><span>ON ${v.on}</span><span>OFF ${v.off}　${v.enabled?"● 有効":"○ 無効"}</span></div>`;
+ })
+}
+function render(){renderDays();renderCards();renderSummary()}
+document.getElementById("save").onclick=()=>{localStorage.setItem("plantTimerV1",JSON.stringify(data));document.getElementById("notice").textContent="✓ この端末のブラウザに設定を保存しました。";}
+document.getElementById("reset").onclick=()=>{if(confirm("全曜日を初期設定に戻しますか？")){data={};dayNames.forEach(d=>data[d]=JSON.parse(JSON.stringify(defaults)));localStorage.removeItem("plantTimerV1");render();}}
+render();
+</script>
+</body></html>
